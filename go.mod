@@ -75,4 +75,4 @@ replace github.com/Sebiee/fortressedge => ../fortress/.claude/worktrees/hostile-
 // dependency, so they are repeated here. Keep them as fortressedge's go.mod has them.
 replace github.com/hashicorp/yamux => github.com/fatedier/yamux v0.0.0-20250825093530-d0154be01cd6
 
-replace github.com/fatedier/frp => github.com/Sebiee/frp v0.71.1-0.20260924224855-19ad36a27187
+replace github.com/fatedier/frp => github.com/Sebiee/frp v0.71.1-0.20260925221814-c74265a6eba0
