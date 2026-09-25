@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  # fortressedge is updated by hand: the provider's version follows it.
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: github.com/Sebiee/fortressedge
+    groups:
+      minor:
+        update-types: [minor, patch]

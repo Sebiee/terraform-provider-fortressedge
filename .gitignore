@@ -1,0 +1,6 @@
+/dist/
+/terraform-provider-fortressedge
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
