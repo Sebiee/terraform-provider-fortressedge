@@ -1,53 +1,77 @@
 # Terraform Provider for FortressEdge
 
-Bakes [FortressEdge](https://github.com/Sebiee/fortressedge) ISOs on the
-machine that runs Terraform. `fortressedge_iso` takes a release ISO,
-pinned by its checksum, and `fortress.yml`, and returns the baked ISO's
-path and SHA-256 for the platform's upload, such as
-`proxmox_virtual_environment_file`. The bake is fortressedge's own
-(`github.com/Sebiee/fortressedge/bake`), so it is the same bytes as
-`fortressctl bake`, on any OS, and the checksum is known at plan time.
+The [FortressEdge](https://github.com/Sebiee/fortressedge) provider bakes
+edge ISOs on the machine that runs Terraform. Its data source,
+`fortressedge_iso`, takes a FortressEdge release ISO, pinned by its
+checksum, and a `fortress.yml`, and returns the baked ISO's path and
+SHA-256 for your platform to upload.
+
+A bake is reproducible: the same release and `fortress.yml` give the same
+bytes on any machine, identical to `fortressctl bake`. The checksum is
+therefore known at plan time, and an unchanged configuration uploads
+nothing. `fortress.yml` is checked at plan time, as the edge checks it.
+
+## Usage
 
 ```terraform
-data "fortressedge_iso" "prod" {
+terraform {
+  required_providers {
+    fortressedge = { source = "sebiee/fortressedge" }
+  }
+}
+
+data "fortressedge_iso" "edge" {
   release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.1.0/fortressedge-v0.1.0.iso"
-  release_sha256 = "…"
+  release_sha256 = "…" # from the release's SHA256SUMS
   config         = file("${path.module}/fortress.yml")
+}
+
+output "iso" {
+  value = {
+    path   = data.fortressedge_iso.edge.path
+    sha256 = data.fortressedge_iso.edge.sha256
+  }
 }
 ```
 
-Documentation: [docs/](docs/index.md), and [examples/proxmox](examples/proxmox/main.tf).
+`release_path` takes a local ISO in place of `release_url` and
+`release_sha256`. Downloads and baked ISOs are cached in the user's cache
+directory, or in the provider's `cache_dir`.
+
+- [Provider documentation](docs/index.md)
+- [`fortressedge_iso`](docs/data-sources/iso.md)
+- [An edge on Proxmox](examples/proxmox/main.tf), with
+  [bpg/proxmox](https://registry.terraform.io/providers/bpg/proxmox)
 
 ## Versions
 
-The provider validates and bakes `fortress.yml` with the fortressedge
-module version in `go.mod`, so bake an ISO with the provider release that
-matches its edge release: fortressedge v0.2.x with provider v0.2.x.
+The provider checks and bakes `fortress.yml` with the FortressEdge code of
+its own release. Use the provider version that matches the FortressEdge
+release you bake.
 
 ## Development
 
+Requires Go, and Terraform for the acceptance tests.
+
 ```sh
-make test       # unit tests
-make testacc    # through Terraform itself (needs terraform on PATH)
 make build      # ./terraform-provider-fortressedge
+make test       # unit tests
+make testacc    # acceptance tests, through Terraform
 ```
 
 ## Releasing
 
-A `v*` tag runs goreleaser (`.goreleaser.yml`), which builds every
-platform, signs `SHA256SUMS` with GPG, and publishes a GitHub release the
-Terraform Registry picks up. Once, before the first release:
+Pushing a `v*` tag runs [goreleaser](https://goreleaser.com), which
+builds every platform, signs `SHA256SUMS` with GPG, and publishes the
+GitHub release the Terraform Registry reads. The workflow needs two
+repository secrets: `GPG_PRIVATE_KEY`, an ASCII-armored RSA key whose
+public half is registered with the Terraform Registry, and `PASSPHRASE`.
 
-1. Make a GPG key for signing (RSA or DSA; the registry does not take
-   ed25519): `gpg --full-generate-key`, then
-   `gpg --armor --export-secret-keys <id>` and `gpg --armor --export <id>`.
-2. In this repository's Settings, Secrets and variables, Actions, add
-   `GPG_PRIVATE_KEY` (the armored private key) and `PASSPHRASE`.
-3. In the Terraform Registry, Publish, Provider, sign in with GitHub, add
-   the public key under the namespace's signing keys, and pick this
-   repository.
-4. Make `go.mod` require a published fortressedge instead of the local
-   checkout: `go mod edit -dropreplace github.com/Sebiee/fortressedge`
-   and `go get github.com/Sebiee/fortressedge@<version>`. The release
-   workflow refuses to build while the local replace is there.
-5. `git tag v0.1.0 && git push origin v0.1.0`.
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+## License
+
+MIT
