@@ -10,7 +10,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -23,8 +26,19 @@ type isoDataSource struct{ cacheDir string }
 
 func newISO() datasource.DataSource { return &isoDataSource{} }
 
+// isoModel's fortress.yml attributes are bake.Config's fields, each named
+// as its fortress.yml key.
 type isoModel struct {
-	Config        types.String `tfsdk:"config"`
+	ClientCA          types.String `tfsdk:"client_ca"`
+	ACME              types.String `tfsdk:"acme"`
+	ACMECA            types.String `tfsdk:"acme_ca"`
+	NTP               types.String `tfsdk:"ntp"`
+	RenewInterval     types.String `tfsdk:"renew_interval"`
+	QUIC              types.Bool   `tfsdk:"quic"`
+	AccessLog         types.Bool   `tfsdk:"access_log"`
+	AccessLogMaxSize  types.String `tfsdk:"access_log_max_size"`
+	AccessLogMaxFiles types.Int64  `tfsdk:"access_log_max_files"`
+
 	ReleaseURL    types.String `tfsdk:"release_url"`
 	ReleaseSHA256 types.String `tfsdk:"release_sha256"`
 	ReleasePath   types.String `tfsdk:"release_path"`
@@ -34,18 +48,73 @@ type isoModel struct {
 	FileName      types.String `tfsdk:"file_name"`
 }
 
+// config is m's fortress.yml, and whether Terraform knows all of it yet.
+func (m isoModel) config() (bake.Config, bool) {
+	for _, v := range []attr.Value{m.ClientCA, m.ACME, m.ACMECA, m.NTP, m.RenewInterval,
+		m.QUIC, m.AccessLog, m.AccessLogMaxSize, m.AccessLogMaxFiles} {
+		if v.IsUnknown() {
+			return bake.Config{}, false
+		}
+	}
+	return bake.Config{
+		ClientCA:          m.ClientCA.ValueString(),
+		ACME:              m.ACME.ValueString(),
+		ACMECA:            m.ACMECA.ValueString(),
+		NTP:               m.NTP.ValueString(),
+		RenewInterval:     m.RenewInterval.ValueString(),
+		QUIC:              m.QUIC.ValueBool(),
+		AccessLog:         m.AccessLog.ValueBool(),
+		AccessLogMaxSize:  m.AccessLogMaxSize.ValueString(),
+		AccessLogMaxFiles: int(m.AccessLogMaxFiles.ValueInt64()),
+	}, true
+}
+
 func (d *isoDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_iso"
 }
 
 func (d *isoDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "A FortressEdge release ISO with fortress.yml baked in, as `fortressctl bake` makes it. " +
-			"The same release and fortress.yml give the same bytes, so `sha256` is known at plan time.",
+		Description: "A FortressEdge release ISO with fortress.yml baked in, written from these attributes, " +
+			"as `fortressctl bake` makes it. The same release and settings give the same bytes, so `sha256` " +
+			"is known at plan time. The settings are checked at plan time, as the edge checks them.",
 		Attributes: map[string]schema.Attribute{
-			"config": schema.StringAttribute{
-				Required:    true,
-				Description: "The fortress.yml to bake: acme, acme_ca, client_ca, ntp, and the rest. Checked as the edge checks it.",
+			"client_ca": schema.StringAttribute{
+				Required: true,
+				Description: "The PEM CA certificate that signs the dark-node, operator, and log-reader " +
+					"certificates: exactly one certificate.",
+			},
+			"acme": schema.StringAttribute{
+				Optional:    true,
+				Description: "The ACME directory URL. Default: Let's Encrypt.",
+			},
+			"acme_ca": schema.StringAttribute{
+				Optional:    true,
+				Description: "The PEM CA that signed the ACME directory's HTTPS certificate. Default: the system roots.",
+			},
+			"ntp": schema.StringAttribute{
+				Optional:    true,
+				Description: "The time source for the boot clock sync, host or host:port. Default: pool.ntp.org.",
+			},
+			"renew_interval": schema.StringAttribute{
+				Optional:    true,
+				Description: "How often ACME certificates are checked and renewed once due, a duration such as 4h. Default: 4h.",
+			},
+			"quic": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Dark nodes may also connect over QUIC on UDP 443. Default: false.",
+			},
+			"access_log": schema.BoolAttribute{
+				Optional:    true,
+				Description: "One JSON line per site request, served at /~!ops/access. Default: false.",
+			},
+			"access_log_max_size": schema.StringAttribute{
+				Optional:    true,
+				Description: "The size at which the access log starts a new file, such as 8MiB (KiB, MiB, GiB). Default: 8MiB.",
+			},
+			"access_log_max_files": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Access log files kept, the current one included. Default: 3.",
 			},
 			"release_url": schema.StringAttribute{
 				Optional:    true,
@@ -106,12 +175,23 @@ func (m isoModel) check() []attrError {
 	if s := m.ReleaseSHA256; !s.IsNull() && !s.IsUnknown() && !hexSHA256.MatchString(s.ValueString()) {
 		out = append(out, attrError{path.Root("release_sha256"), "want 64 lower-case hex digits"})
 	}
-	if c := m.Config; !c.IsNull() && !c.IsUnknown() {
-		if err := bake.Check([]byte(c.ValueString())); err != nil {
-			out = append(out, attrError{path.Root("config"), err.Error()})
+	if cfg, known := m.config(); known {
+		if err := cfg.Check(); err != nil {
+			out = append(out, attrError{attribute(err), err.Error()})
 		}
 	}
 	return out
+}
+
+// attribute is the attribute an error from bake.Config.Check is about:
+// the fortress.yml key it names ("fortress.yml: acme: ..."), which is also
+// the attribute's name. client_ca, the one required, holds the others.
+func attribute(err error) path.Path {
+	msg, _ := strings.CutPrefix(err.Error(), "fortress.yml: ")
+	if i := strings.IndexAny(msg, ": "); i > 0 && slices.Contains(bake.Keys(), msg[:i]) {
+		return path.Root(msg[:i])
+	}
+	return path.Root("client_ca")
 }
 
 func (d *isoDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -126,6 +206,7 @@ func (d *isoDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		}
 		return
 	}
+	cfg, _ := m.config() // Read sees known values only
 	src := m.ReleasePath.ValueString()
 	if src == "" {
 		var err error
@@ -134,7 +215,7 @@ func (d *isoDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 			return
 		}
 	}
-	out, sum, err := bakeISO(d.cacheDir, src, []byte(m.Config.ValueString()))
+	out, sum, err := bakeISO(d.cacheDir, src, cfg.YAML())
 	if err != nil {
 		resp.Diagnostics.AddError("Bake failed", err.Error())
 		return
