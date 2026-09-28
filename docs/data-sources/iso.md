@@ -2,17 +2,20 @@
 page_title: "fortressedge_iso Data Source - fortressedge"
 subcategory: ""
 description: |-
-  A FortressEdge release ISO with fortress.yml baked in, as fortressctl bake makes it.
+  A FortressEdge release ISO with fortress.yml baked in, written from these attributes, as fortressctl bake makes it.
 ---
 
 # fortressedge_iso (Data Source)
 
-A FortressEdge release ISO with `fortress.yml` baked in, as `fortressctl
-bake` makes it. The same release and `fortress.yml` give the same bytes,
-so `sha256` is known at plan time. `fortress.yml` is checked at plan time
-as the edge checks it: a missing `client_ca`, an unknown key, or a policy
-key (`block`, `exempt`, `limits`, which `fortressctl apply` puts on a
-running edge) is an error.
+A FortressEdge release ISO with `fortress.yml` baked in, written from
+these attributes, as `fortressctl bake` makes it. Each attribute is the
+`fortress.yml` key of the same name; one left out keeps the edge's
+default. The same release and settings give the same bytes, so `sha256`
+is known at plan time. The settings are checked at plan time, as the edge
+checks them.
+
+The policy (`block`, `exempt`, `limits`) is not baked: `fortressctl
+apply` puts it on a running edge.
 
 ## Example Usage
 
@@ -20,9 +23,11 @@ With [bpg/proxmox](https://registry.terraform.io/providers/bpg/proxmox):
 
 ```terraform
 data "fortressedge_iso" "prod" {
-  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.1.0/fortressedge-v0.1.0.iso"
+  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.2.0/fortressedge-v0.2.0.iso"
   release_sha256 = "…" # from the release's SHA256SUMS
-  config         = file("${path.module}/fortress.yml")
+  client_ca      = file("${path.module}/client-ca.pem")
+  acme           = "https://vault.example.com:8200/v1/pki/acme/directory"
+  acme_ca        = file("${path.module}/vault-ca.pem")
 }
 
 resource "proxmox_virtual_environment_file" "edge_iso" {
@@ -44,13 +49,21 @@ in place of `release_url` and `release_sha256`.
 
 ### Required
 
-- `config` (String) The `fortress.yml` to bake: `acme`, `acme_ca`, `client_ca`, `ntp`, and the rest.
+- `client_ca` (String) The PEM CA certificate that signs the dark-node, operator, and log-reader certificates: exactly one certificate.
 
 ### Optional
 
+- `access_log` (Boolean) One JSON line per site request, served at `/~!ops/access`. Default: `false`.
+- `access_log_max_files` (Number) Access log files kept, the current one included. Default: `3`.
+- `access_log_max_size` (String) The size at which the access log starts a new file, such as `8MiB` (`KiB`, `MiB`, `GiB`). Default: `8MiB`.
+- `acme` (String) The ACME directory URL. Default: Let's Encrypt.
+- `acme_ca` (String) The PEM CA that signed the ACME directory's HTTPS certificate. Default: the system roots.
+- `ntp` (String) The time source for the boot clock sync, `host` or `host:port`. Default: `pool.ntp.org`.
+- `quic` (Boolean) Dark nodes may also connect over QUIC on UDP 443. Default: `false`.
 - `release_path` (String) A release ISO on this machine, instead of `release_url`.
 - `release_sha256` (String) The release ISO's SHA-256, from the release's `SHA256SUMS`. A download that does not match is refused. Required with `release_url`.
 - `release_url` (String) Where to download the release ISO, such as its GitHub release asset. Downloads are cached by checksum.
+- `renew_interval` (String) How often ACME certificates are checked and renewed once due, a duration such as `4h`. Default: `4h`.
 
 ### Read-Only
 

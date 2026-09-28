@@ -3,13 +3,14 @@
 The [FortressEdge](https://github.com/Sebiee/fortressedge) provider bakes
 edge ISOs on the machine that runs Terraform. Its data source,
 `fortressedge_iso`, takes a FortressEdge release ISO, pinned by its
-checksum, and a `fortress.yml`, and returns the baked ISO's path and
-SHA-256 for your platform to upload.
+checksum, and the edge's settings (its client CA, its ACME server, and
+the rest of `fortress.yml`, one attribute each), and returns the baked
+ISO's path and SHA-256 for your platform to upload.
 
-A bake is reproducible: the same release and `fortress.yml` give the same
-bytes on any machine, identical to `fortressctl bake`. The checksum is
+A bake is reproducible: the same release and settings give the same bytes
+on any machine, identical to `fortressctl bake`. The checksum is
 therefore known at plan time, and an unchanged configuration uploads
-nothing. `fortress.yml` is checked at plan time, as the edge checks it.
+nothing. The settings are checked at plan time, as the edge checks them.
 
 ## Usage
 
@@ -21,9 +22,11 @@ terraform {
 }
 
 data "fortressedge_iso" "edge" {
-  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.1.0/fortressedge-v0.1.0.iso"
+  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.2.0/fortressedge-v0.2.0.iso"
   release_sha256 = "…" # from the release's SHA256SUMS
-  config         = file("${path.module}/fortress.yml")
+  client_ca      = file("${path.module}/client-ca.pem")
+  acme           = "https://vault.example.com:8200/v1/pki/acme/directory"
+  acme_ca        = file("${path.module}/vault-ca.pem")
 }
 
 output "iso" {
@@ -50,7 +53,8 @@ the release it requires, so its major.minor follows FortressEdge's: provider
 v0.2.x reads `fortress.yml` as FortressEdge v0.2.x does. FortressEdge
 changes `fortress.yml` only in minor releases, so a provider of the same
 minor bakes every patch release of it. Use the provider version whose
-major.minor matches the FortressEdge release you bake.
+major.minor matches the FortressEdge release you bake. It has an attribute
+for each key of that release.
 
 ## Development
 

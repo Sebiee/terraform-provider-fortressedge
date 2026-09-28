@@ -15,12 +15,15 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -57,8 +60,8 @@ func fakeRelease(t *testing.T) string {
 	return iso
 }
 
-// edgeYML is a fortress.yml with a fresh client CA.
-func edgeYML(t *testing.T) string {
+// testCA is a fresh client CA, PEM.
+func testCA(t *testing.T) string {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -73,8 +76,13 @@ func edgeYML(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	crt := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
-	return "quic: true\nclient_ca: |\n  " + strings.ReplaceAll(strings.TrimSpace(string(crt)), "\n", "\n  ") + "\n"
+	return string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
+}
+
+// edgeYML is a fortress.yml with a fresh client CA.
+func edgeYML(t *testing.T) string {
+	t.Helper()
+	return string(bake.Config{ClientCA: testCA(t), QUIC: true}.YAML())
 }
 
 // The provider's bake is fortressctl's: the same release and fortress.yml
@@ -136,37 +144,91 @@ func TestFetchReleasePinsAndCaches(t *testing.T) {
 	}
 }
 
+// nullModel is an isoModel with every attribute null, as Terraform passes
+// an empty block.
+func nullModel() isoModel {
+	m := isoModel{}
+	v := reflect.ValueOf(&m).Elem()
+	for i := range v.NumField() {
+		switch v.Field(i).Interface().(type) {
+		case types.String:
+			v.Field(i).Set(reflect.ValueOf(types.StringNull()))
+		case types.Bool:
+			v.Field(i).Set(reflect.ValueOf(types.BoolNull()))
+		case types.Int64:
+			v.Field(i).Set(reflect.ValueOf(types.Int64Null()))
+		}
+	}
+	return m
+}
+
+// Every fortress.yml key is an attribute of the same name, in the model
+// and in the schema: a key fortressedge adds fails here until it is.
+func TestAttributesCoverConfig(t *testing.T) {
+	var tags []string
+	for f := range reflect.TypeFor[isoModel]().Fields() {
+		tags = append(tags, f.Tag.Get("tfsdk"))
+	}
+	var resp datasource.SchemaResponse
+	newISO().Schema(context.Background(), datasource.SchemaRequest{}, &resp)
+	for _, k := range bake.Keys() {
+		if !slices.Contains(tags, k) {
+			t.Errorf("isoModel has no %s", k)
+		}
+		if _, ok := resp.Schema.Attributes[k]; !ok {
+			t.Errorf("the schema has no %s", k)
+		}
+	}
+}
+
 func TestCheck(t *testing.T) {
-	good := isoModel{Config: types.StringValue(edgeYML(t)), ReleasePath: types.StringValue("r.iso"),
-		ReleaseURL: types.StringNull(), ReleaseSHA256: types.StringNull()}
+	good := nullModel()
+	good.ClientCA, good.ReleasePath = types.StringValue(testCA(t)), types.StringValue("r.iso")
 	if errs := good.check(); len(errs) != 0 {
 		t.Fatalf("%v", errs)
 	}
-	for name, m := range map[string]isoModel{
-		"both sources": {Config: good.Config, ReleasePath: good.ReleasePath, ReleaseURL: types.StringValue("https://x/r.iso"), ReleaseSHA256: types.StringValue(strings.Repeat("a", 64))},
-		"no source":    {Config: good.Config, ReleasePath: types.StringNull(), ReleaseURL: types.StringNull(), ReleaseSHA256: types.StringNull()},
-		"no pin":       {Config: good.Config, ReleasePath: types.StringNull(), ReleaseURL: types.StringValue("https://x/r.iso"), ReleaseSHA256: types.StringNull()},
-		"bad pin":      {Config: good.Config, ReleasePath: types.StringNull(), ReleaseURL: types.StringValue("https://x/r.iso"), ReleaseSHA256: types.StringValue("ABC")},
-		"policy key":   {Config: types.StringValue("block: [192.0.2.9]\n"), ReleasePath: good.ReleasePath, ReleaseURL: types.StringNull(), ReleaseSHA256: types.StringNull()},
+	with := func(f func(*isoModel)) isoModel { m := good; f(&m); return m }
+	for name, tc := range map[string]struct {
+		m  isoModel
+		at string
+	}{
+		"both sources": {with(func(m *isoModel) {
+			m.ReleaseURL, m.ReleaseSHA256 = types.StringValue("https://x/r.iso"), types.StringValue(strings.Repeat("a", 64))
+		}), "release_url"},
+		"no source": {with(func(m *isoModel) { m.ReleasePath = types.StringNull() }), "release_url"},
+		"no pin": {with(func(m *isoModel) {
+			m.ReleasePath, m.ReleaseURL = types.StringNull(), types.StringValue("https://x/r.iso")
+		}), "release_sha256"},
+		"bad pin": {with(func(m *isoModel) {
+			m.ReleasePath, m.ReleaseURL, m.ReleaseSHA256 = types.StringNull(), types.StringValue("https://x/r.iso"), types.StringValue("ABC")
+		}), "release_sha256"},
+		"not a CA":       {with(func(m *isoModel) { m.ClientCA = types.StringValue("hello") }), "client_ca"},
+		"acme not a URL": {with(func(m *isoModel) { m.ACME = types.StringValue("not a url") }), "acme"},
+		"bad interval":   {with(func(m *isoModel) { m.RenewInterval = types.StringValue("often") }), "renew_interval"},
+		"bad size":       {with(func(m *isoModel) { m.AccessLogMaxSize = types.StringValue("big") }), "access_log_max_size"},
 	} {
-		if errs := m.check(); len(errs) == 0 {
+		errs := tc.m.check()
+		if len(errs) == 0 {
 			t.Errorf("%s: accepted", name)
+			continue
+		}
+		if at := errs[0].at.String(); at != tc.at {
+			t.Errorf("%s: on %s, want %s: %s", name, at, tc.at, errs[0].msg)
 		}
 	}
 	// A value Terraform does not know yet is checked once it does.
-	unknown := good
-	unknown.Config = types.StringUnknown()
+	unknown := with(func(m *isoModel) { m.ClientCA, m.ACME = types.StringUnknown(), types.StringValue("not a url") })
 	if errs := unknown.check(); len(errs) != 0 {
-		t.Fatalf("unknown config: %v", errs)
+		t.Fatalf("unknown client_ca: %v", errs)
 	}
 }
 
 // Through Terraform itself (TF_ACC=1): two plans of the same inputs agree,
 // and the checksum is the bake's.
 func TestAccISO(t *testing.T) {
-	src, edge := fakeRelease(t), edgeYML(t)
+	src, ca := fakeRelease(t), testCA(t)
 	direct := filepath.Join(t.TempDir(), "edge.iso")
-	if err := bake.ISO(direct, src, []byte(edge)); err != nil {
+	if err := bake.ISO(direct, src, bake.Config{ClientCA: ca, QUIC: true}.YAML()); err != nil {
 		t.Fatal(err)
 	}
 	want, _ := fileSHA256(direct)
@@ -175,8 +237,9 @@ func TestAccISO(t *testing.T) {
 }
 data "fortressedge_iso" "edge" {
   release_path = "` + src + `"
-  config       = <<-EOT
-` + edge + `EOT
+  quic         = true
+  client_ca    = <<-EOT
+` + ca + `EOT
 }
 output "sha256" { value = data.fortressedge_iso.edge.sha256 }
 `
@@ -187,9 +250,9 @@ output "sha256" { value = data.fortressedge_iso.edge.sha256 }
 		// The refused config goes first: the test destroys with the last one.
 		Steps: []resource.TestStep{
 			{
-				Config:      strings.Replace(cfg, "quic: true", "quic: true\nblock: [192.0.2.9]", 1),
+				Config:      strings.Replace(cfg, "quic         = true", `acme = "not a url"`, 1),
 				PlanOnly:    true,
-				ExpectError: regexp.MustCompile("fortressctl apply"),
+				ExpectError: regexp.MustCompile(`Invalid acme`),
 			},
 			{
 				Config: cfg,

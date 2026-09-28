@@ -8,14 +8,16 @@ terraform {
 }
 
 variable "release_sha256" {
-  description = "fortressedge-v0.1.0.iso's line in the release's SHA256SUMS"
+  description = "fortressedge-v0.2.0.iso's line in the release's SHA256SUMS"
   type        = string
 }
 
 data "fortressedge_iso" "prod" {
-  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.1.0/fortressedge-v0.1.0.iso"
+  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.2.0/fortressedge-v0.2.0.iso"
   release_sha256 = var.release_sha256
-  config         = file("${path.module}/fortress.yml")
+  client_ca      = file("${path.module}/client-ca.pem")
+  acme           = "https://vault.example.com:8200/v1/pki/acme/directory"
+  acme_ca        = file("${path.module}/vault-ca.pem")
 }
 
 resource "proxmox_virtual_environment_file" "edge_iso" {
