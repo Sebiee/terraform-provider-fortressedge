@@ -63,9 +63,12 @@ make testacc    # acceptance tests, through Terraform
 
 Pushing a `v*` tag runs [goreleaser](https://goreleaser.com), which
 builds every platform, signs `SHA256SUMS` with GPG, and publishes the
-GitHub release the Terraform Registry reads. The workflow needs two
-repository secrets: `GPG_PRIVATE_KEY`, an ASCII-armored RSA key whose
-public half is registered with the Terraform Registry, and `PASSPHRASE`.
+GitHub release the Terraform Registry reads. Each zip also carries a build
+provenance attestation, signed by GitHub
+(`gh attestation verify <zip> --repo Sebiee/terraform-provider-fortressedge`).
+The workflow needs two repository secrets: `GPG_PRIVATE_KEY`, an
+ASCII-armored RSA key whose public half is registered with the Terraform
+Registry, and `PASSPHRASE`.
 
 ```sh
 git tag v0.1.0

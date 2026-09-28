@@ -3,7 +3,7 @@ module github.com/Sebiee/terraform-provider-fortressedge
 go 1.27.0
 
 require (
-	github.com/Sebiee/fortressedge v0.0.0
+	github.com/Sebiee/fortressedge v0.0.0-20260928141823-18b1f2b753e6
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
@@ -64,12 +64,6 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-// Temporary: the fortressedge branch with the bake package, checked out
-// beside this repository. Once github.com/Sebiee/fortressedge is public,
-// drop this line and run go get github.com/Sebiee/fortressedge@<version>;
-// the release workflow refuses to build while it is here.
-replace github.com/Sebiee/fortressedge => ../fortress/.claude/worktrees/hostile-requests
 
 // fortressedge pins these two forks; a replace is not inherited from a
 // dependency, so they are repeated here. Keep them as fortressedge's go.mod has them.
