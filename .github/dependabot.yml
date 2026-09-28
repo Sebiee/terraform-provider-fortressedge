@@ -4,13 +4,16 @@ updates:
     directory: /
     schedule:
       interval: weekly
-  # fortressedge is updated by hand: the provider's version follows it.
+  # Daily, so a fortressedge release reaches the provider within a day.
+  # fortressedge comes in a pull request of its own: merging it releases
+  # the provider (release.yml).
   - package-ecosystem: gomod
     directory: /
     schedule:
-      interval: weekly
-    ignore:
-      - dependency-name: github.com/Sebiee/fortressedge
+      interval: daily
     groups:
+      fortressedge:
+        patterns: ["github.com/Sebiee/fortressedge"]
       minor:
         update-types: [minor, patch]
+        exclude-patterns: ["github.com/Sebiee/fortressedge"]

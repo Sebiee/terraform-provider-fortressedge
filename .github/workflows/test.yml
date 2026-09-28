@@ -21,6 +21,8 @@ jobs:
         run: |
           go mod tidy -diff
           test -z "$(gofmt -l .)"
+      - name: frp and yamux pinned as fortressedge pins them
+        run: scripts/check-pins.sh
       - run: go vet ./...
       - run: go build ./...
 

@@ -46,8 +46,11 @@ directory, or in the provider's `cache_dir`.
 ## Versions
 
 The provider checks and bakes `fortress.yml` with the FortressEdge code of
-its own release. Use the provider version that matches the FortressEdge
-release you bake.
+the release it requires, so its major.minor follows FortressEdge's: provider
+v0.2.x reads `fortress.yml` as FortressEdge v0.2.x does. FortressEdge
+changes `fortress.yml` only in minor releases, so a provider of the same
+minor bakes every patch release of it. Use the provider version whose
+major.minor matches the FortressEdge release you bake.
 
 ## Development
 
@@ -61,7 +64,14 @@ make testacc    # acceptance tests, through Terraform
 
 ## Releasing
 
-Pushing a `v*` tag runs [goreleaser](https://goreleaser.com), which
+Dependabot opens a pull request of its own for each FortressEdge release.
+Merging it releases the provider: the release workflow tags the next
+version, FortressEdge's major.minor with the provider's next patch, and
+publishes it. A release for a change of the provider's own is a tag
+pushed by hand. If a FortressEdge release moves its frp or yamux pins, CI
+says so, and `scripts/check-pins.sh --fix` copies them.
+
+A release runs [goreleaser](https://goreleaser.com), which
 builds every platform, signs `SHA256SUMS` with GPG, and publishes the
 GitHub release the Terraform Registry reads. Each zip also carries a build
 provenance attestation, signed by GitHub
@@ -70,9 +80,11 @@ The workflow needs two repository secrets: `GPG_PRIVATE_KEY`, an
 ASCII-armored RSA key whose public half is registered with the Terraform
 Registry, and `PASSPHRASE`.
 
+A fix of the provider's own, after v0.1.1:
+
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+git tag -a v0.1.2 -m v0.1.2
+git push origin v0.1.2
 ```
 
 ## License
