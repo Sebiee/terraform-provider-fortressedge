@@ -3,7 +3,7 @@ module github.com/Sebiee/terraform-provider-fortressedge
 go 1.27.0
 
 require (
-	github.com/Sebiee/fortressedge v0.3.0
+	github.com/Sebiee/fortressedge v0.4.0
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0

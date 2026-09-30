@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -157,6 +158,8 @@ func nullModel() isoModel {
 			v.Field(i).Set(reflect.ValueOf(types.BoolNull()))
 		case types.Int64:
 			v.Field(i).Set(reflect.ValueOf(types.Int64Null()))
+		case types.List:
+			v.Field(i).Set(reflect.ValueOf(types.ListNull(types.StringType)))
 		}
 	}
 	return m
@@ -205,6 +208,9 @@ func TestCheck(t *testing.T) {
 		"not a CA":       {with(func(m *isoModel) { m.ClientCA = types.StringValue("hello") }), "client_ca"},
 		"acme not a URL": {with(func(m *isoModel) { m.ACME = types.StringValue("not a url") }), "acme"},
 		"bad interval":   {with(func(m *isoModel) { m.RenewInterval = types.StringValue("often") }), "renew_interval"},
+		"bad ntp": {with(func(m *isoModel) {
+			m.NTP = types.ListValueMust(types.StringType, []attr.Value{types.StringValue("ntp11.metas.ch"), types.StringValue("not a name")})
+		}), "ntp"},
 	} {
 		errs := tc.m.check()
 		if len(errs) == 0 {
@@ -227,7 +233,8 @@ func TestCheck(t *testing.T) {
 func TestAccISO(t *testing.T) {
 	src, ca := fakeRelease(t), testCA(t)
 	direct := filepath.Join(t.TempDir(), "edge.iso")
-	if err := bake.ISO(direct, src, bake.Config{ClientCA: ca, QUIC: true}.YAML()); err != nil {
+	ntp := []string{"ntp11.metas.ch", "ntp12.metas.ch", "ntp13.metas.ch"}
+	if err := bake.ISO(direct, src, bake.Config{ClientCA: ca, QUIC: true, NTP: ntp}.YAML()); err != nil {
 		t.Fatal(err)
 	}
 	want, _ := fileSHA256(direct)
@@ -237,6 +244,7 @@ func TestAccISO(t *testing.T) {
 data "fortressedge_iso" "edge" {
   release_path = "` + src + `"
   quic         = true
+  ntp          = ["ntp11.metas.ch", "ntp12.metas.ch", "ntp13.metas.ch"]
   client_ca    = <<-EOT
 ` + ca + `EOT
 }

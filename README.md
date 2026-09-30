@@ -22,7 +22,7 @@ terraform {
 }
 
 data "fortressedge_iso" "edge" {
-  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.3.0/fortressedge-v0.3.0.iso"
+  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.4.0/fortressedge-v0.4.0.iso"
   release_sha256 = "…" # from the release's SHA256SUMS
   client_ca      = file("${path.module}/client-ca.pem")
   acme           = "https://vault.example.com:8200/v1/pki/acme/directory"
@@ -50,7 +50,7 @@ directory, or in the provider's `cache_dir`.
 
 The provider checks and bakes `fortress.yml` with the FortressEdge code of
 the release it requires, so its major.minor follows FortressEdge's: provider
-v0.3.x reads `fortress.yml` as FortressEdge v0.3.x does. FortressEdge
+v0.4.x reads `fortress.yml` as FortressEdge v0.4.x does. FortressEdge
 changes `fortress.yml` only in minor releases, so a provider of the same
 minor bakes every patch release of it. Use the provider version whose
 major.minor matches the FortressEdge release you bake. It has an attribute

@@ -24,7 +24,7 @@ With [bpg/proxmox](https://registry.terraform.io/providers/bpg/proxmox):
 
 ```terraform
 data "fortressedge_iso" "prod" {
-  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.3.0/fortressedge-v0.3.0.iso"
+  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.4.0/fortressedge-v0.4.0.iso"
   release_sha256 = "…" # from the release's SHA256SUMS
   client_ca      = file("${path.module}/client-ca.pem")
   acme           = "https://vault.example.com:8200/v1/pki/acme/directory"
@@ -56,7 +56,7 @@ in place of `release_url` and `release_sha256`.
 
 - `acme` (String) The ACME directory URL. Default: Let's Encrypt.
 - `acme_ca` (String) The PEM CA that signed the ACME directory's HTTPS certificate. Default: the system roots.
-- `ntp` (String) The time source for the boot clock sync, `host` or `host:port`. Default: `pool.ntp.org`.
+- `ntp` (List of String) The time servers the edge keeps its clock to, each `host` or `host:port`, at most eight: three or more, so one that is wrong is outvoted. Default: `pool.ntp.org`.
 - `quic` (Boolean) Dark nodes may also connect over QUIC on UDP 443. Default: `false`.
 - `release_path` (String) A release ISO on this machine, instead of `release_url`.
 - `release_sha256` (String) The release ISO's SHA-256, from the release's `SHA256SUMS`. A download that does not match is refused. Required with `release_url`.

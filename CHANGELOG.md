@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+Bakes FortressEdge v0.4.0, whose clock keeps in step with its NTP
+servers while it runs and follows them only when a majority agree.
+`ntp` is a list of servers, in place of one:
+
+```terraform
+ntp = ["ntp11.metas.ch", "ntp12.metas.ch", "ntp13.metas.ch"]
+```
+
 ## 0.3.0
 
 Bakes FortressEdge v0.3.0. `access_log`, `access_log_max_size`, and

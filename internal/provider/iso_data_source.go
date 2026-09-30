@@ -32,7 +32,7 @@ type isoModel struct {
 	ClientCA      types.String `tfsdk:"client_ca"`
 	ACME          types.String `tfsdk:"acme"`
 	ACMECA        types.String `tfsdk:"acme_ca"`
-	NTP           types.String `tfsdk:"ntp"`
+	NTP           types.List   `tfsdk:"ntp"`
 	RenewInterval types.String `tfsdk:"renew_interval"`
 	QUIC          types.Bool   `tfsdk:"quic"`
 
@@ -47,17 +47,24 @@ type isoModel struct {
 
 // config is m's fortress.yml, and whether Terraform knows all of it yet.
 func (m isoModel) config() (bake.Config, bool) {
-	for _, v := range []attr.Value{m.ClientCA, m.ACME, m.ACMECA, m.NTP, m.RenewInterval,
-		m.QUIC} {
+	vals := []attr.Value{m.ClientCA, m.ACME, m.ACMECA, m.NTP, m.RenewInterval, m.QUIC}
+	vals = append(vals, m.NTP.Elements()...)
+	for _, v := range vals {
 		if v.IsUnknown() {
 			return bake.Config{}, false
+		}
+	}
+	var ntp []string
+	for _, v := range m.NTP.Elements() {
+		if s, ok := v.(types.String); ok && !s.IsNull() {
+			ntp = append(ntp, s.ValueString())
 		}
 	}
 	return bake.Config{
 		ClientCA:      m.ClientCA.ValueString(),
 		ACME:          m.ACME.ValueString(),
 		ACMECA:        m.ACMECA.ValueString(),
-		NTP:           m.NTP.ValueString(),
+		NTP:           ntp,
 		RenewInterval: m.RenewInterval.ValueString(),
 		QUIC:          m.QUIC.ValueBool(),
 	}, true
@@ -86,9 +93,11 @@ func (d *isoDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 				Optional:    true,
 				Description: "The PEM CA that signed the ACME directory's HTTPS certificate. Default: the system roots.",
 			},
-			"ntp": schema.StringAttribute{
+			"ntp": schema.ListAttribute{
+				ElementType: types.StringType,
 				Optional:    true,
-				Description: "The time source for the boot clock sync, host or host:port. Default: pool.ntp.org.",
+				Description: "The time servers the edge keeps its clock to, each host or host:port, at most eight: " +
+					"three or more, so one that is wrong is outvoted. Default: pool.ntp.org.",
 			},
 			"renew_interval": schema.StringAttribute{
 				Optional:    true,
