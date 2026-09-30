@@ -14,8 +14,9 @@ default. The same release and settings give the same bytes, so `sha256`
 is known at plan time. The settings are checked at plan time, as the edge
 checks them.
 
-The policy (`block`, `exempt`, `limits`) is not baked: `fortressctl
-apply` puts it on a running edge.
+The policy (`block`, `exempt`, `limits`, the access log, tracing, and
+per-site settings) is not baked: `fortressctl apply` puts it on a
+running edge.
 
 ## Example Usage
 
@@ -23,7 +24,7 @@ With [bpg/proxmox](https://registry.terraform.io/providers/bpg/proxmox):
 
 ```terraform
 data "fortressedge_iso" "prod" {
-  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.2.0/fortressedge-v0.2.0.iso"
+  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.3.0/fortressedge-v0.3.0.iso"
   release_sha256 = "…" # from the release's SHA256SUMS
   client_ca      = file("${path.module}/client-ca.pem")
   acme           = "https://vault.example.com:8200/v1/pki/acme/directory"
@@ -53,9 +54,6 @@ in place of `release_url` and `release_sha256`.
 
 ### Optional
 
-- `access_log` (Boolean) One JSON line per site request, served at `/~!ops/access`. Default: `false`.
-- `access_log_max_files` (Number) Access log files kept, the current one included. Default: `3`.
-- `access_log_max_size` (String) The size at which the access log starts a new file, such as `8MiB` (`KiB`, `MiB`, `GiB`). Default: `8MiB`.
 - `acme` (String) The ACME directory URL. Default: Let's Encrypt.
 - `acme_ca` (String) The PEM CA that signed the ACME directory's HTTPS certificate. Default: the system roots.
 - `ntp` (String) The time source for the boot clock sync, `host` or `host:port`. Default: `pool.ntp.org`.

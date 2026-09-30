@@ -29,15 +29,12 @@ func newISO() datasource.DataSource { return &isoDataSource{} }
 // isoModel's fortress.yml attributes are bake.Config's fields, each named
 // as its fortress.yml key.
 type isoModel struct {
-	ClientCA          types.String `tfsdk:"client_ca"`
-	ACME              types.String `tfsdk:"acme"`
-	ACMECA            types.String `tfsdk:"acme_ca"`
-	NTP               types.String `tfsdk:"ntp"`
-	RenewInterval     types.String `tfsdk:"renew_interval"`
-	QUIC              types.Bool   `tfsdk:"quic"`
-	AccessLog         types.Bool   `tfsdk:"access_log"`
-	AccessLogMaxSize  types.String `tfsdk:"access_log_max_size"`
-	AccessLogMaxFiles types.Int64  `tfsdk:"access_log_max_files"`
+	ClientCA      types.String `tfsdk:"client_ca"`
+	ACME          types.String `tfsdk:"acme"`
+	ACMECA        types.String `tfsdk:"acme_ca"`
+	NTP           types.String `tfsdk:"ntp"`
+	RenewInterval types.String `tfsdk:"renew_interval"`
+	QUIC          types.Bool   `tfsdk:"quic"`
 
 	ReleaseURL    types.String `tfsdk:"release_url"`
 	ReleaseSHA256 types.String `tfsdk:"release_sha256"`
@@ -51,21 +48,18 @@ type isoModel struct {
 // config is m's fortress.yml, and whether Terraform knows all of it yet.
 func (m isoModel) config() (bake.Config, bool) {
 	for _, v := range []attr.Value{m.ClientCA, m.ACME, m.ACMECA, m.NTP, m.RenewInterval,
-		m.QUIC, m.AccessLog, m.AccessLogMaxSize, m.AccessLogMaxFiles} {
+		m.QUIC} {
 		if v.IsUnknown() {
 			return bake.Config{}, false
 		}
 	}
 	return bake.Config{
-		ClientCA:          m.ClientCA.ValueString(),
-		ACME:              m.ACME.ValueString(),
-		ACMECA:            m.ACMECA.ValueString(),
-		NTP:               m.NTP.ValueString(),
-		RenewInterval:     m.RenewInterval.ValueString(),
-		QUIC:              m.QUIC.ValueBool(),
-		AccessLog:         m.AccessLog.ValueBool(),
-		AccessLogMaxSize:  m.AccessLogMaxSize.ValueString(),
-		AccessLogMaxFiles: int(m.AccessLogMaxFiles.ValueInt64()),
+		ClientCA:      m.ClientCA.ValueString(),
+		ACME:          m.ACME.ValueString(),
+		ACMECA:        m.ACMECA.ValueString(),
+		NTP:           m.NTP.ValueString(),
+		RenewInterval: m.RenewInterval.ValueString(),
+		QUIC:          m.QUIC.ValueBool(),
 	}, true
 }
 
@@ -103,18 +97,6 @@ func (d *isoDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 			"quic": schema.BoolAttribute{
 				Optional:    true,
 				Description: "Dark nodes may also connect over QUIC on UDP 443. Default: false.",
-			},
-			"access_log": schema.BoolAttribute{
-				Optional:    true,
-				Description: "One JSON line per site request, served at /~!ops/access. Default: false.",
-			},
-			"access_log_max_size": schema.StringAttribute{
-				Optional:    true,
-				Description: "The size at which the access log starts a new file, such as 8MiB (KiB, MiB, GiB). Default: 8MiB.",
-			},
-			"access_log_max_files": schema.Int64Attribute{
-				Optional:    true,
-				Description: "Access log files kept, the current one included. Default: 3.",
 			},
 			"release_url": schema.StringAttribute{
 				Optional:    true,

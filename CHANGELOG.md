@@ -1,6 +1,23 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
+
+Bakes FortressEdge v0.3.0. `access_log`, `access_log_max_size`, and
+`access_log_max_files` are gone: FortressEdge 0.3 moved them from
+`fortress.yml` to its policy, so `fortressctl apply` turns the access
+log on and off on a running edge, for every site or one. Drop them from
+`fortressedge_iso` and put them in `policy.yml`:
+
+```yaml
+access_log: true
+access_log_max_size: 8MiB
+access_log_max_files: 3
+```
+
+The Proxmox example boots the ISO from `scsi0` (virtio-scsi), which the
+BIOS reads about 2 seconds faster than an IDE CD.
+
+## 0.2.0
 
 `fortressedge_iso` takes the edge's settings as attributes, one per
 `fortress.yml` key (`client_ca`, `acme`, `acme_ca`, `ntp`,

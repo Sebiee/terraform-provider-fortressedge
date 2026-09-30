@@ -205,7 +205,6 @@ func TestCheck(t *testing.T) {
 		"not a CA":       {with(func(m *isoModel) { m.ClientCA = types.StringValue("hello") }), "client_ca"},
 		"acme not a URL": {with(func(m *isoModel) { m.ACME = types.StringValue("not a url") }), "acme"},
 		"bad interval":   {with(func(m *isoModel) { m.RenewInterval = types.StringValue("often") }), "renew_interval"},
-		"bad size":       {with(func(m *isoModel) { m.AccessLogMaxSize = types.StringValue("big") }), "access_log_max_size"},
 	} {
 		errs := tc.m.check()
 		if len(errs) == 0 {

@@ -8,12 +8,12 @@ terraform {
 }
 
 variable "release_sha256" {
-  description = "fortressedge-v0.2.0.iso's line in the release's SHA256SUMS"
+  description = "fortressedge-v0.3.0.iso's line in the release's SHA256SUMS"
   type        = string
 }
 
 data "fortressedge_iso" "prod" {
-  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.2.0/fortressedge-v0.2.0.iso"
+  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.3.0/fortressedge-v0.3.0.iso"
   release_sha256 = var.release_sha256
   client_ca      = file("${path.module}/client-ca.pem")
   acme           = "https://vault.example.com:8200/v1/pki/acme/directory"
@@ -38,14 +38,14 @@ resource "proxmox_virtual_environment_vm" "edge1" {
   memory { dedicated = 1024 }
   cdrom {
     file_id   = proxmox_virtual_environment_file.edge_iso.id
-    interface = "ide0"
+    interface = "scsi0" # virtio-scsi; IDE boots about 2s slower
   }
   disk {
     datastore_id = "local-lvm"
     interface    = "virtio0"
     size         = 1
   }
-  boot_order = ["ide0"]
+  boot_order = ["scsi0"]
   network_device { bridge = "vmbr0" }
   initialization {
     datastore_id = "local-lvm"
