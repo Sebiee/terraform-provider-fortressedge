@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+
+Bakes FortressEdge v0.5.0, which gets dark nodes back within a fraction
+of a second of a restart and answers 503 while they are away.
+`fortress.yml` is unchanged: no attribute changes.
+
 ## 0.4.0
 
 Bakes FortressEdge v0.4.0, whose clock keeps in step with its NTP
