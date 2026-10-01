@@ -35,6 +35,12 @@ type isoModel struct {
 	NTP           types.List   `tfsdk:"ntp"`
 	RenewInterval types.String `tfsdk:"renew_interval"`
 	QUIC          types.Bool   `tfsdk:"quic"`
+	Vault         types.String `tfsdk:"vault"`
+	VaultCA       types.String `tfsdk:"vault_ca"`
+	VaultMount    types.String `tfsdk:"vault_mount"`
+	VaultPath     types.String `tfsdk:"vault_path"`
+	VaultRoleID   types.String `tfsdk:"vault_role_id"`
+	VaultSecretID types.String `tfsdk:"vault_secret_id"`
 
 	ReleaseURL    types.String `tfsdk:"release_url"`
 	ReleaseSHA256 types.String `tfsdk:"release_sha256"`
@@ -47,7 +53,8 @@ type isoModel struct {
 
 // config is m's fortress.yml, and whether Terraform knows all of it yet.
 func (m isoModel) config() (bake.Config, bool) {
-	vals := []attr.Value{m.ClientCA, m.ACME, m.ACMECA, m.NTP, m.RenewInterval, m.QUIC}
+	vals := []attr.Value{m.ClientCA, m.ACME, m.ACMECA, m.NTP, m.RenewInterval, m.QUIC,
+		m.Vault, m.VaultCA, m.VaultMount, m.VaultPath, m.VaultRoleID, m.VaultSecretID}
 	vals = append(vals, m.NTP.Elements()...)
 	for _, v := range vals {
 		if v.IsUnknown() {
@@ -67,6 +74,12 @@ func (m isoModel) config() (bake.Config, bool) {
 		NTP:           ntp,
 		RenewInterval: m.RenewInterval.ValueString(),
 		QUIC:          m.QUIC.ValueBool(),
+		Vault:         m.Vault.ValueString(),
+		VaultCA:       m.VaultCA.ValueString(),
+		VaultMount:    m.VaultMount.ValueString(),
+		VaultPath:     m.VaultPath.ValueString(),
+		VaultRoleID:   m.VaultRoleID.ValueString(),
+		VaultSecretID: m.VaultSecretID.ValueString(),
 	}, true
 }
 
@@ -106,6 +119,34 @@ func (d *isoDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 			"quic": schema.BoolAttribute{
 				Optional:    true,
 				Description: "Dark nodes may also connect over QUIC on UDP 443. Default: false.",
+			},
+			"vault": schema.StringAttribute{
+				Optional: true,
+				Description: "The https URL of a Vault whose KV v2 path the edges that serve the same names share " +
+					"their certificates, ACME account, and challenges in. Needs vault_mount, vault_path, vault_role_id, " +
+					"and vault_secret_id. Default: none, each edge keeps its own.",
+			},
+			"vault_ca": schema.StringAttribute{
+				Optional:    true,
+				Description: "The PEM CA, or chain, that signed Vault's HTTPS certificate. Default: the system roots.",
+			},
+			"vault_mount": schema.StringAttribute{
+				Optional:    true,
+				Description: "The KV v2 mount, such as edge-certs.",
+			},
+			"vault_path": schema.StringAttribute{
+				Optional:    true,
+				Description: "These edges' path in the mount, such as prod/public: one path for the edges that serve the same names.",
+			},
+			"vault_role_id": schema.StringAttribute{
+				Optional:    true,
+				Description: "The AppRole the edge logs in to Vault with. Its policy should allow vault_path and nothing else.",
+			},
+			"vault_secret_id": schema.StringAttribute{
+				Optional:  true,
+				Sensitive: true,
+				Description: "The AppRole's secret ID, baked into the ISO like the rest of fortress.yml. Bind it to the " +
+					"edge's address (secret_id_bound_cidrs) so a leaked one is useless elsewhere.",
 			},
 			"release_url": schema.StringAttribute{
 				Optional:    true,

@@ -24,7 +24,7 @@ With [bpg/proxmox](https://registry.terraform.io/providers/bpg/proxmox):
 
 ```terraform
 data "fortressedge_iso" "prod" {
-  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.5.0/fortressedge-v0.5.0.iso"
+  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.6.0/fortressedge-v0.6.0.iso"
   release_sha256 = "…" # from the release's SHA256SUMS
   client_ca      = file("${path.module}/client-ca.pem")
   acme           = "https://vault.example.com:8200/v1/pki/acme/directory"
@@ -62,6 +62,12 @@ in place of `release_url` and `release_sha256`.
 - `release_sha256` (String) The release ISO's SHA-256, from the release's `SHA256SUMS`. A download that does not match is refused. Required with `release_url`.
 - `release_url` (String) Where to download the release ISO, such as its GitHub release asset. Downloads are cached by checksum.
 - `renew_interval` (String) How often ACME certificates are checked and renewed once due, a duration such as `4h`. Default: `4h`.
+- `vault` (String) The https URL of a Vault whose KV v2 path the edges that serve the same names share their certificates, ACME account, and challenges in. Needs `vault_mount`, `vault_path`, `vault_role_id`, and `vault_secret_id`. Default: none, each edge keeps its own.
+- `vault_ca` (String) The PEM CA, or chain, that signed Vault's HTTPS certificate. Default: the system roots.
+- `vault_mount` (String) The KV v2 mount, such as `edge-certs`.
+- `vault_path` (String) These edges' path in the mount, such as `prod/public`: one path for the edges that serve the same names.
+- `vault_role_id` (String) The AppRole the edge logs in to Vault with. Its policy should allow `vault_path` and nothing else.
+- `vault_secret_id` (String, Sensitive) The AppRole's secret ID, baked into the ISO like the rest of `fortress.yml`. Bind it to the edge's address (`secret_id_bound_cidrs`) so a leaked one is useless elsewhere.
 
 ### Read-Only
 

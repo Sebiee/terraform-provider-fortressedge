@@ -3,7 +3,7 @@ module github.com/Sebiee/terraform-provider-fortressedge
 go 1.27.0
 
 require (
-	github.com/Sebiee/fortressedge v0.5.0
+	github.com/Sebiee/fortressedge v0.6.0
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
@@ -69,4 +69,4 @@ require (
 // dependency, so they are repeated here. Keep them as fortressedge's go.mod has them.
 replace github.com/hashicorp/yamux => github.com/fatedier/yamux v0.0.0-20250825093530-d0154be01cd6
 
-replace github.com/fatedier/frp => github.com/Sebiee/frp v0.71.1-0.20260930163047-d05d30dbd0f2
+replace github.com/fatedier/frp => github.com/Sebiee/frp v0.71.1-0.20261001122815-fa8c6219d85c

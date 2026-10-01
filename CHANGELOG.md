@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.0
+
+Bakes FortressEdge v0.6.0, whose edges can share their certificates
+through Vault. New attributes, all optional:
+
+```terraform
+vault           = "https://vault.internal.example:8200"
+vault_ca        = file("platform-root.pem")
+vault_mount     = "edge-certs"
+vault_path      = "prod/public"
+vault_role_id   = var.edge_role_id
+vault_secret_id = var.edge_secret_id # sensitive
+```
+
 ## 0.5.0
 
 Bakes FortressEdge v0.5.0, which gets dark nodes back within a fraction

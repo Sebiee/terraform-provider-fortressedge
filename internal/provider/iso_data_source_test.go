@@ -184,6 +184,15 @@ func TestAttributesCoverConfig(t *testing.T) {
 	}
 }
 
+// The AppRole's secret ID stays out of plans and logs.
+func TestVaultSecretIDIsSensitive(t *testing.T) {
+	var resp datasource.SchemaResponse
+	newISO().Schema(context.Background(), datasource.SchemaRequest{}, &resp)
+	if !resp.Schema.Attributes["vault_secret_id"].IsSensitive() {
+		t.Fatal("vault_secret_id is not sensitive")
+	}
+}
+
 func TestCheck(t *testing.T) {
 	good := nullModel()
 	good.ClientCA, good.ReleasePath = types.StringValue(testCA(t)), types.StringValue("r.iso")
@@ -208,6 +217,13 @@ func TestCheck(t *testing.T) {
 		"not a CA":       {with(func(m *isoModel) { m.ClientCA = types.StringValue("hello") }), "client_ca"},
 		"acme not a URL": {with(func(m *isoModel) { m.ACME = types.StringValue("not a url") }), "acme"},
 		"bad interval":   {with(func(m *isoModel) { m.RenewInterval = types.StringValue("often") }), "renew_interval"},
+		"vault over http": {with(func(m *isoModel) {
+			m.Vault, m.VaultMount, m.VaultPath = types.StringValue("http://v.example:8200"), types.StringValue("m"), types.StringValue("p")
+			m.VaultRoleID, m.VaultSecretID = types.StringValue("r"), types.StringValue("s")
+		}), "vault"},
+		"vault without its approle": {with(func(m *isoModel) {
+			m.Vault, m.VaultMount, m.VaultPath = types.StringValue("https://v.example:8200"), types.StringValue("m"), types.StringValue("p")
+		}), "vault_role_id"},
 		"bad ntp": {with(func(m *isoModel) {
 			m.NTP = types.ListValueMust(types.StringType, []attr.Value{types.StringValue("ntp11.metas.ch"), types.StringValue("not a name")})
 		}), "ntp"},

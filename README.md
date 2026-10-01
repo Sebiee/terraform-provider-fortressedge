@@ -22,7 +22,7 @@ terraform {
 }
 
 data "fortressedge_iso" "edge" {
-  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.5.0/fortressedge-v0.5.0.iso"
+  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.6.0/fortressedge-v0.6.0.iso"
   release_sha256 = "…" # from the release's SHA256SUMS
   client_ca      = file("${path.module}/client-ca.pem")
   acme           = "https://vault.example.com:8200/v1/pki/acme/directory"
