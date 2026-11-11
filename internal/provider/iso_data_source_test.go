@@ -200,6 +200,13 @@ func TestCheck(t *testing.T) {
 		t.Fatalf("%v", errs)
 	}
 	with := func(f func(*isoModel)) isoModel { m := good; f(&m); return m }
+	own := with(func(m *isoModel) {
+		m.Vault, m.VaultMount, m.VaultPath = types.StringValue("https://v.example:8200"), types.StringValue("m"), types.StringValue("p")
+		m.VaultRoleID, m.VaultSecretID, m.VaultInISO = types.StringValue("r"), types.StringValue("s"), types.BoolValue(true)
+	})
+	if errs := own.check(); len(errs) != 0 {
+		t.Fatalf("a per-edge ISO with its secret ID: %v", errs)
+	}
 	for name, tc := range map[string]struct {
 		m  isoModel
 		at string
@@ -219,8 +226,16 @@ func TestCheck(t *testing.T) {
 		"bad interval":   {with(func(m *isoModel) { m.RenewInterval = types.StringValue("often") }), "renew_interval"},
 		"vault over http": {with(func(m *isoModel) {
 			m.Vault, m.VaultMount, m.VaultPath = types.StringValue("http://v.example:8200"), types.StringValue("m"), types.StringValue("p")
-			m.VaultRoleID, m.VaultSecretID = types.StringValue("r"), types.StringValue("s")
+			m.VaultRoleID = types.StringValue("r")
 		}), "vault"},
+		"a secret ID in a shared ISO": {with(func(m *isoModel) {
+			m.Vault, m.VaultMount, m.VaultPath = types.StringValue("https://v.example:8200"), types.StringValue("m"), types.StringValue("p")
+			m.VaultRoleID, m.VaultSecretID = types.StringValue("r"), types.StringValue("s")
+		}), "vault_secret_id"},
+		"vault_secret_in_iso without a secret ID": {with(func(m *isoModel) {
+			m.Vault, m.VaultMount, m.VaultPath = types.StringValue("https://v.example:8200"), types.StringValue("m"), types.StringValue("p")
+			m.VaultRoleID, m.VaultInISO = types.StringValue("r"), types.BoolValue(true)
+		}), "vault_secret_in_iso"},
 		"vault without its approle": {with(func(m *isoModel) {
 			m.Vault, m.VaultMount, m.VaultPath = types.StringValue("https://v.example:8200"), types.StringValue("m"), types.StringValue("p")
 		}), "vault_role_id"},

@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.9.0
+
+Bakes FortressEdge v0.9.0, a security release. A shared ISO no longer
+carries the Vault secret ID: FortressEdge 0.9 refuses `vault_secret_id`
+in `fortress.yml` unless the ISO is said to be one edge's own. Give each
+edge its own secret ID, bound to its address, in one of two ways:
+
+- in its cloud-init `user-data`, with `fortressedge_iso` shared by every
+  edge:
+
+  ```yaml
+  #cloud-config
+  fqdn: edge1.example.com
+  vault_secret_id: 2f1b...
+  ```
+
+- or in an ISO baked for that edge alone, with the new
+  `vault_secret_in_iso`:
+
+  ```terraform
+  vault_secret_id     = var.edge1_secret_id # sensitive
+  vault_secret_in_iso = true
+  ```
+
+  That ISO is a credential, written `0600`: keep it as you keep the
+  keys, and never publish it.
+
+A configuration that sets `vault_secret_id` without `vault_secret_in_iso`
+fails at plan time. The other attributes are unchanged: FortressEdge 0.7
+and 0.8 changed only the policy, which this provider does not bake.
+
 ## 0.6.0
 
 Bakes FortressEdge v0.6.0, whose edges can share their certificates
