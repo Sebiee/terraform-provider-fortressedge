@@ -41,6 +41,7 @@ type isoModel struct {
 	VaultPath     types.String `tfsdk:"vault_path"`
 	VaultRoleID   types.String `tfsdk:"vault_role_id"`
 	VaultSecretID types.String `tfsdk:"vault_secret_id"`
+	VaultInISO    types.Bool   `tfsdk:"vault_secret_in_iso"`
 
 	ReleaseURL    types.String `tfsdk:"release_url"`
 	ReleaseSHA256 types.String `tfsdk:"release_sha256"`
@@ -54,7 +55,7 @@ type isoModel struct {
 // config is m's fortress.yml, and whether Terraform knows all of it yet.
 func (m isoModel) config() (bake.Config, bool) {
 	vals := []attr.Value{m.ClientCA, m.ACME, m.ACMECA, m.NTP, m.RenewInterval, m.QUIC,
-		m.Vault, m.VaultCA, m.VaultMount, m.VaultPath, m.VaultRoleID, m.VaultSecretID}
+		m.Vault, m.VaultCA, m.VaultMount, m.VaultPath, m.VaultRoleID, m.VaultSecretID, m.VaultInISO}
 	vals = append(vals, m.NTP.Elements()...)
 	for _, v := range vals {
 		if v.IsUnknown() {
@@ -68,18 +69,19 @@ func (m isoModel) config() (bake.Config, bool) {
 		}
 	}
 	return bake.Config{
-		ClientCA:      m.ClientCA.ValueString(),
-		ACME:          m.ACME.ValueString(),
-		ACMECA:        m.ACMECA.ValueString(),
-		NTP:           ntp,
-		RenewInterval: m.RenewInterval.ValueString(),
-		QUIC:          m.QUIC.ValueBool(),
-		Vault:         m.Vault.ValueString(),
-		VaultCA:       m.VaultCA.ValueString(),
-		VaultMount:    m.VaultMount.ValueString(),
-		VaultPath:     m.VaultPath.ValueString(),
-		VaultRoleID:   m.VaultRoleID.ValueString(),
-		VaultSecretID: m.VaultSecretID.ValueString(),
+		ClientCA:         m.ClientCA.ValueString(),
+		ACME:             m.ACME.ValueString(),
+		ACMECA:           m.ACMECA.ValueString(),
+		NTP:              ntp,
+		RenewInterval:    m.RenewInterval.ValueString(),
+		QUIC:             m.QUIC.ValueBool(),
+		Vault:            m.Vault.ValueString(),
+		VaultCA:          m.VaultCA.ValueString(),
+		VaultMount:       m.VaultMount.ValueString(),
+		VaultPath:        m.VaultPath.ValueString(),
+		VaultRoleID:      m.VaultRoleID.ValueString(),
+		VaultSecretID:    m.VaultSecretID.ValueString(),
+		VaultSecretInISO: m.VaultInISO.ValueBool(),
 	}, true
 }
 
@@ -123,8 +125,9 @@ func (d *isoDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 			"vault": schema.StringAttribute{
 				Optional: true,
 				Description: "The https URL of a Vault whose KV v2 path the edges that serve the same names share " +
-					"their certificates, ACME account, and challenges in. Needs vault_mount, vault_path, vault_role_id, " +
-					"and vault_secret_id. Default: none, each edge keeps its own.",
+					"their certificates, ACME account, and challenges in. Needs vault_mount, vault_path, and vault_role_id, " +
+					"and each edge's own secret ID: in its cloud-init user-data, or in an ISO baked for it alone " +
+					"(vault_secret_id with vault_secret_in_iso). Default: none, each edge keeps its own.",
 			},
 			"vault_ca": schema.StringAttribute{
 				Optional:    true,
@@ -145,8 +148,15 @@ func (d *isoDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 			"vault_secret_id": schema.StringAttribute{
 				Optional:  true,
 				Sensitive: true,
-				Description: "The AppRole's secret ID, baked into the ISO like the rest of fortress.yml. Bind it to the " +
-					"edge's address (secret_id_bound_cidrs) so a leaked one is useless elsewhere.",
+				Description: "This edge's own AppRole secret ID, for an ISO baked for this one edge alone: valid only " +
+					"with vault_secret_in_iso. The ISO is then a credential, written 0600: keep it as you keep the keys, " +
+					"never publish it, and bind the secret ID to the edge's address (cidr_list) so a copy is useless " +
+					"elsewhere. Without it, each edge's secret ID goes in its cloud-init user-data.",
+			},
+			"vault_secret_in_iso": schema.BoolAttribute{
+				Optional: true,
+				Description: "This ISO is one edge's own, so it may carry vault_secret_id. A shared ISO holds no secret. " +
+					"Default: false.",
 			},
 			"release_url": schema.StringAttribute{
 				Optional:    true,

@@ -24,7 +24,7 @@ With [bpg/proxmox](https://registry.terraform.io/providers/bpg/proxmox):
 
 ```terraform
 data "fortressedge_iso" "prod" {
-  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.6.0/fortressedge-v0.6.0.iso"
+  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.9.0/fortressedge-v0.9.0.iso"
   release_sha256 = "…" # from the release's SHA256SUMS
   client_ca      = file("${path.module}/client-ca.pem")
   acme           = "https://vault.example.com:8200/v1/pki/acme/directory"
@@ -62,12 +62,13 @@ in place of `release_url` and `release_sha256`.
 - `release_sha256` (String) The release ISO's SHA-256, from the release's `SHA256SUMS`. A download that does not match is refused. Required with `release_url`.
 - `release_url` (String) Where to download the release ISO, such as its GitHub release asset. Downloads are cached by checksum.
 - `renew_interval` (String) How often ACME certificates are checked and renewed once due, a duration such as `4h`. Default: `4h`.
-- `vault` (String) The https URL of a Vault whose KV v2 path the edges that serve the same names share their certificates, ACME account, and challenges in. Needs `vault_mount`, `vault_path`, `vault_role_id`, and `vault_secret_id`. Default: none, each edge keeps its own.
+- `vault` (String) The https URL of a Vault whose KV v2 path the edges that serve the same names share their certificates, ACME account, and challenges in. Needs `vault_mount`, `vault_path`, and `vault_role_id`, and each edge's own secret ID: in its cloud-init `user-data`, or in an ISO baked for it alone (`vault_secret_id` with `vault_secret_in_iso`). Default: none, each edge keeps its own.
 - `vault_ca` (String) The PEM CA, or chain, that signed Vault's HTTPS certificate. Default: the system roots.
 - `vault_mount` (String) The KV v2 mount, such as `edge-certs`.
 - `vault_path` (String) These edges' path in the mount, such as `prod/public`: one path for the edges that serve the same names.
 - `vault_role_id` (String) The AppRole the edge logs in to Vault with. Its policy should allow `vault_path` and nothing else.
-- `vault_secret_id` (String, Sensitive) The AppRole's secret ID, baked into the ISO like the rest of `fortress.yml`. Bind it to the edge's address (`secret_id_bound_cidrs`) so a leaked one is useless elsewhere.
+- `vault_secret_id` (String, Sensitive) This edge's own AppRole secret ID, for an ISO baked for this one edge alone: valid only with `vault_secret_in_iso`. The ISO is then a credential, written `0600`: keep it as you keep the keys, never publish it, and bind the secret ID to the edge's address (`cidr_list`) so a copy is useless elsewhere. Without it, each edge's secret ID goes in its cloud-init `user-data`.
+- `vault_secret_in_iso` (Boolean) This ISO is one edge's own, so it may carry `vault_secret_id`. A shared ISO holds no secret. Default: `false`.
 
 ### Read-Only
 
