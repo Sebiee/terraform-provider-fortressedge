@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.2
+
+Bakes FortressEdge v0.9.4. Nothing in `fortressedge_iso` changes.
+
+- FortressEdge 0.9.4: the tunnel name asks for a client certificate
+  without naming the client CA, so a client with no certificate of
+  yours no longer learns who issues them.
+
 ## 0.9.1
 
 Bakes FortressEdge v0.9.3. Nothing in `fortressedge_iso` changes.
