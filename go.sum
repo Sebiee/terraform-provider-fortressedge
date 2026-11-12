@@ -4,8 +4,8 @@ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERo
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/ProtonMail/go-crypto v1.4.1 h1:9RfcZHqEQUvP8RzecWEUafnZVtEvrBVL9BiF67IQOfM=
 github.com/ProtonMail/go-crypto v1.4.1/go.mod h1:e1OaTyu5SYVrO9gKOEhTc+5UcXtTUa+P3uLudwcgPqo=
-github.com/Sebiee/fortressedge v0.9.0 h1:UWz2qSiWjdPykx+2rLGeCHM6enUZeP8qgELoWrq+3ro=
-github.com/Sebiee/fortressedge v0.9.0/go.mod h1:5GTd9J9PdpK1H/uy+7IAYDv3avwxC0x96U4ly2FhBqA=
+github.com/Sebiee/fortressedge v0.9.3 h1:p5Rpn3o/U1Q9z6QFS8zH86ZQmaS+hHjor47iszPAdzA=
+github.com/Sebiee/fortressedge v0.9.3/go.mod h1:o9X3gyb5dQwdDvVarkRlBs2tW7/kZCuTZ9V+SOcP2MU=
 github.com/agext/levenshtein v1.2.3 h1:YB2fHEn0UJagG8T1rrWknE3ZQzWM06O8AMAatNn7lmo=
 github.com/agext/levenshtein v1.2.3/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/anchore/go-lzo v0.1.0 h1:NgAacnzqPeGH49Ky19QKLBZEuFRqtTG9cdaucc3Vncs=

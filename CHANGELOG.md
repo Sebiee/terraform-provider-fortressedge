@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.1
+
+Bakes FortressEdge v0.9.3. Nothing in `fortressedge_iso` changes.
+
+- FortressEdge 0.9.1: an edge behind a load balancer stops without
+  refusing a visitor, once the policy marks the balancer's check site
+  with `health_check: true`.
+- FortressEdge 0.9.2: the edge's frps stops without a data race.
+- FortressEdge 0.9.3: `fortresskube_tunnel_up` follows a tunnel that
+  reconnects by itself.
+
 ## 0.9.0
 
 Bakes FortressEdge v0.9.0, a security release. A shared ISO no longer
