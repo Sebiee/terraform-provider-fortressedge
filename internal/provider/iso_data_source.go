@@ -97,8 +97,9 @@ func (d *isoDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 		Attributes: map[string]schema.Attribute{
 			"client_ca": schema.StringAttribute{
 				Required: true,
-				Description: "The PEM CA certificate that signs the dark-node, operator, and log-reader " +
-					"certificates: exactly one certificate.",
+				Description: "The PEM CA certificates that sign the dark-node, operator, and log-reader " +
+					"certificates: one, or up to four one after the other while the edges change CA, with " +
+					"nothing but space between them. Each CA can name any node, operator, and log reader.",
 			},
 			"acme": schema.StringAttribute{
 				Optional:    true,

@@ -24,7 +24,7 @@ With [bpg/proxmox](https://registry.terraform.io/providers/bpg/proxmox):
 
 ```terraform
 data "fortressedge_iso" "prod" {
-  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.9.4/fortressedge-v0.9.4.iso"
+  release_url    = "https://github.com/Sebiee/fortressedge/releases/download/v0.10.0/fortressedge-v0.10.0.iso"
   release_sha256 = "…" # from the release's SHA256SUMS
   client_ca      = file("${path.module}/client-ca.pem")
   acme           = "https://vault.example.com:8200/v1/pki/acme/directory"
@@ -50,7 +50,7 @@ in place of `release_url` and `release_sha256`.
 
 ### Required
 
-- `client_ca` (String) The PEM CA certificate that signs the dark-node, operator, and log-reader certificates: exactly one certificate.
+- `client_ca` (String) The PEM CA certificates that sign the dark-node, operator, and log-reader certificates: one, or up to four one after the other while the edges change CA, with nothing but space between them. Each CA can name any node, operator, and log reader.
 
 ### Optional
 
