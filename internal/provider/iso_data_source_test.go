@@ -207,6 +207,11 @@ func TestCheck(t *testing.T) {
 	if errs := own.check(); len(errs) != 0 {
 		t.Fatalf("a per-edge ISO with its secret ID: %v", errs)
 	}
+	// Two CAs, as while the edges change CA.
+	two := with(func(m *isoModel) { m.ClientCA = types.StringValue(testCA(t) + testCA(t)) })
+	if errs := two.check(); len(errs) != 0 {
+		t.Fatalf("two client CAs: %v", errs)
+	}
 	for name, tc := range map[string]struct {
 		m  isoModel
 		at string
@@ -221,7 +226,10 @@ func TestCheck(t *testing.T) {
 		"bad pin": {with(func(m *isoModel) {
 			m.ReleasePath, m.ReleaseURL, m.ReleaseSHA256 = types.StringNull(), types.StringValue("https://x/r.iso"), types.StringValue("ABC")
 		}), "release_sha256"},
-		"not a CA":       {with(func(m *isoModel) { m.ClientCA = types.StringValue("hello") }), "client_ca"},
+		"not a CA": {with(func(m *isoModel) { m.ClientCA = types.StringValue("hello") }), "client_ca"},
+		"text between two CAs": {with(func(m *isoModel) {
+			m.ClientCA = types.StringValue(testCA(t) + "the new one\n" + testCA(t))
+		}), "client_ca"},
 		"acme not a URL": {with(func(m *isoModel) { m.ACME = types.StringValue("not a url") }), "acme"},
 		"bad interval":   {with(func(m *isoModel) { m.RenewInterval = types.StringValue("often") }), "renew_interval"},
 		"vault over http": {with(func(m *isoModel) {

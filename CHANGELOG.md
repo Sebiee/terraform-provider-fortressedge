@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.10.0
+
+Bakes FortressEdge v0.10.0. `client_ca` takes several CAs, so that the
+edges can change their client CA without refusing a tunnel:
+
+```hcl
+client_ca = join("", [file("new-ca.pem"), file("old-ca.pem")])
+```
+
+- `client_ca` holds up to four PEM CA certificates, one after the other,
+  each file ending with a newline. Nothing else may be in it: text
+  between them, another PEM block, PEM headers, a certificate that is not
+  a CA's, or the same CA twice fails at plan time. One CA works as
+  before.
+- Every CA in `client_ca` can name any node, operator, and log reader of
+  the edge; a certificate is its SPIFFE ID, whichever CA signed it. See
+  FortressEdge's docs/certificates.md, "Changing the client CA".
+- Bake two CAs only for edges on FortressEdge 0.10.0: 0.9 refuses them.
+
 ## 0.9.2
 
 Bakes FortressEdge v0.9.4. Nothing in `fortressedge_iso` changes.
