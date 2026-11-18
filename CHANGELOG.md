@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.0
+
+Bakes FortressEdge v0.11.0. Nothing in `fortressedge_iso` changes.
+
+- FortressEdge 0.11.0: behind a balancer in front of several edges, a
+  tunnel moves only when its edge lets it go, so an edge keeps its last
+  tunnel; and an edge with a `health_check` site closes the visitor's
+  connection after a `503` for a site no tunnel carries. Update the
+  edges before `fortresskube`.
+
 ## 0.10.0
 
 Bakes FortressEdge v0.10.0. `client_ca` takes several CAs, so that the
